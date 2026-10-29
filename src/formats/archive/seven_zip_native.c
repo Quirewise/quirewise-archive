@@ -2,10 +2,10 @@
 #include "seven_zip_files_info.h"
 #include "seven_zip_streams.h"
 
+#include <quirewise/compression.h>
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
-#include <zlib.h>
 
 /* Parses direct headers and one-folder encoded headers with linear coder
  * chains. Unsupported coder graphs and external filename streams are rejected. */
@@ -42,7 +42,7 @@ static int seven_zip_decode_encoded_header(const uint8_t *archive,
     QwSevenZipStreamInfo parsed = {0};
     uint8_t *decoded = NULL;
     size_t position = 1u;
-    uLong crc;
+    uint32_t crc;
     int result = 0;
     if (!archive || !encoded || !encoded_size || !out_header ||
         !out_header_size) return 0;
@@ -60,10 +60,9 @@ static int seven_zip_decode_encoded_header(const uint8_t *archive,
             archive, archive_size, next_header_offset, &parsed, decoded,
             (size_t)parsed.unpack_size)) goto done;
     if (parsed.substreams[0].has_crc) {
-        crc = crc32(0L, Z_NULL, 0);
-        crc = crc32(crc, (const Bytef *)decoded,
-                    (uInt)parsed.substreams[0].unpack_size);
-        if ((uint32_t)crc != parsed.substreams[0].crc) goto done;
+        crc = qw_compression_crc32(decoded,
+                                   (size_t)parsed.substreams[0].unpack_size);
+        if (crc != parsed.substreams[0].crc) goto done;
     }
     if (!parsed.unpack_size || decoded[0] != SEVEN_ZIP_ID_HEADER) goto done;
     *out_header = decoded;
@@ -88,15 +87,14 @@ QwSevenZipHeaderResult qw_seven_zip_header_open(
     const uint8_t *next_header;
     uint8_t *decoded_header = NULL;
     size_t decoded_header_size = 0u;
-    uLong crc;
+    uint32_t crc;
     if (out_header) *out_header = (QwSevenZipHeader){0};
     if (!bytes || !out_header || size < SEVEN_ZIP_START_HEADER_SIZE ||
         memcmp(bytes, signature, sizeof(signature)) != 0) {
         return QW_SEVEN_ZIP_HEADER_INVALID;
     }
-    crc = crc32(0L, Z_NULL, 0);
-    crc = crc32(crc, (const Bytef *)(bytes + 12u), 20u);
-    if ((uint32_t)crc != seven_zip_read_u32_le(bytes + 8u))
+    crc = qw_compression_crc32(bytes + 12u, 20u);
+    if (crc != seven_zip_read_u32_le(bytes + 8u))
         return QW_SEVEN_ZIP_HEADER_INVALID;
     relative_offset = seven_zip_read_u64_le(bytes + 12u);
     next_header_size = seven_zip_read_u64_le(bytes + 20u);
@@ -110,9 +108,8 @@ QwSevenZipHeaderResult qw_seven_zip_header_open(
     next_header_offset = SEVEN_ZIP_START_HEADER_SIZE +
                          (size_t)relative_offset;
     next_header = bytes + next_header_offset;
-    crc = crc32(0L, Z_NULL, 0);
-    crc = crc32(crc, (const Bytef *)next_header, (uInt)next_header_size);
-    if ((uint32_t)crc != seven_zip_read_u32_le(bytes + 28u))
+    crc = qw_compression_crc32(next_header, (size_t)next_header_size);
+    if (crc != seven_zip_read_u32_le(bytes + 28u))
         return QW_SEVEN_ZIP_HEADER_INVALID;
     if (!next_header_size)
         return QW_SEVEN_ZIP_HEADER_UNSUPPORTED;

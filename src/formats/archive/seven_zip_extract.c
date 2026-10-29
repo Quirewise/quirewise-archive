@@ -4,7 +4,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <zlib.h>
+#include <quirewise/compression.h>
 
 #define SEVEN_ZIP_EXTRACT_MEMORY_LIMIT (256u * 1024u * 1024u)
 #define SEVEN_ZIP_EXTRACT_CHUNK_SIZE (64u * 1024u)
@@ -93,7 +93,7 @@ static int seven_zip_emit_entries(const QwSevenZipFilesInfo *files_info,
         if (is_anti) continue;
         if (has_stream) {
             const QwSevenZipSubstream *substream;
-            uLong crc;
+            uint32_t crc;
             if (substream_index >= streams->substream_count ||
                 !files_info->names || !files_info->names[i]) return 0;
             substream = &streams->substreams[substream_index++];
@@ -104,9 +104,8 @@ static int seven_zip_emit_entries(const QwSevenZipFilesInfo *files_info,
             entry_size = substream->unpack_size;
             entry_data = decoded + (size_t)data_position;
             if (substream->has_crc) {
-                crc = crc32(0L, Z_NULL, 0);
-                crc = crc32(crc, entry_data, (uInt)entry_size);
-                if ((uint32_t)crc != substream->crc) return 0;
+                crc = qw_compression_crc32(entry_data, (size_t)entry_size);
+                if (crc != substream->crc) return 0;
             }
             data_position += substream->unpack_size;
         } else if (!is_directory && (!files_info->names || !files_info->names[i])) {

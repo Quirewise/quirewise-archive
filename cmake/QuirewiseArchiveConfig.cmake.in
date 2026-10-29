@@ -1,6 +1,5 @@
 @PACKAGE_INIT@
 include(CMakeFindDependencyMacro)
-find_dependency(ZLIB)
-find_dependency(LibLZMA)
+find_dependency(QuirewiseCompression CONFIG REQUIRED)
 include("${CMAKE_CURRENT_LIST_DIR}/QuirewiseArchiveTargets.cmake")
 check_required_components(QuirewiseArchive)

@@ -1,6 +1,7 @@
 #include "zip_native.h"
-#include "zip_deflate.h"
 #include "../../core/byte_utils.h"
+
+#include <quirewise/compression.h>
 
 #include <limits.h>
 #include <stdlib.h>
@@ -523,13 +524,13 @@ static uint8_t zipcrypto_decrypt_byte(QwZipCrypto *crypto, uint8_t cipher)
 
 static uint32_t zip_crc32(const uint8_t *data, size_t size)
 {
-    return qw_zip_crc32(data, size);
+    return qw_compression_crc32(data, size);
 }
 
 static int zip_inflate_raw(const uint8_t *input, size_t input_size,
                            uint8_t *output, size_t output_size)
 {
-    return qw_zip_inflate_raw(input, input_size, output, output_size);
+    return qw_compression_inflate_raw(input, input_size, output, output_size);
 }
 
 void *qw_zip_reader_extract_to_heap_with_password(QwZipArchive *archive,
@@ -762,6 +763,7 @@ int qw_zip_writer_add_mem(QwZipWriter *writer, const char *archive_name,
     uint8_t *compressed = NULL;
     const uint8_t *payload = input;
     size_t payload_size = size;
+    size_t compressed_capacity;
     size_t name_size;
     size_t record_size;
     uint16_t method = ZIP_METHOD_STORE;
@@ -779,8 +781,18 @@ int qw_zip_writer_add_mem(QwZipWriter *writer, const char *archive_name,
         return 0;
     }
     if (compression_level != QW_ZIP_NO_COMPRESSION && size) {
-        if (!qw_zip_deflate_raw_stored(input, size, &compressed,
-                                       &payload_size)) {
+        compressed_capacity = qw_compression_raw_stored_bound(size);
+        if (compressed_capacity == SIZE_MAX ||
+            compressed_capacity > UINT32_MAX) {
+            writer->failed = 1;
+            return 0;
+        }
+        compressed = (uint8_t *)malloc(compressed_capacity);
+        if (!compressed ||
+            !qw_compression_deflate_raw_stored(input, size, compressed,
+                                               compressed_capacity,
+                                               &payload_size)) {
+            free(compressed);
             writer->failed = 1;
             return 0;
         }

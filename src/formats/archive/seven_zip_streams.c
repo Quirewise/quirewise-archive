@@ -3,7 +3,7 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
-#include <zlib.h>
+#include <quirewise/compression.h>
 
 enum {
     SEVEN_ZIP_START_HEADER_SIZE = 32u,
@@ -398,7 +398,7 @@ int qw_seven_zip_stream_info_decode(const uint8_t *archive,
 {
     size_t pack_offset;
     const uint8_t *packed;
-    uLong crc;
+    uint32_t crc;
     if (!archive || !info || !decoded || !decoded_size ||
         info->unpack_size != (uint64_t)decoded_size ||
         info->unpack_size > (uint64_t)SEVEN_ZIP_STREAM_MEMORY_LIMIT ||
@@ -408,18 +408,15 @@ int qw_seven_zip_stream_info_decode(const uint8_t *archive,
     pack_offset = SEVEN_ZIP_START_HEADER_SIZE + (size_t)info->pack_position;
     if (pack_offset > next_header_offset || pack_offset > archive_size ||
         info->pack_size > (uint64_t)(next_header_offset - pack_offset) ||
-        info->pack_size > (uint64_t)(archive_size - pack_offset) ||
-        info->pack_size > UINT_MAX) return 0;
+        info->pack_size > (uint64_t)(archive_size - pack_offset)) return 0;
     packed = archive + pack_offset;
-    crc = crc32(0L, Z_NULL, 0);
-    crc = crc32(crc, (const Bytef *)packed, (uInt)info->pack_size);
-    if (info->has_pack_crc && (uint32_t)crc != info->pack_crc) return 0;
+    crc = qw_compression_crc32(packed, (size_t)info->pack_size);
+    if (info->has_pack_crc && crc != info->pack_crc) return 0;
     if (!qw_seven_zip_decode_chain(info->coders, info->coder_count, packed,
                                    (size_t)info->pack_size, decoded,
                                    decoded_size)) return 0;
-    crc = crc32(0L, Z_NULL, 0);
-    crc = crc32(crc, (const Bytef *)decoded, (uInt)decoded_size);
-    return !info->has_folder_crc || (uint32_t)crc == info->folder_crc;
+    crc = qw_compression_crc32(decoded, decoded_size);
+    return !info->has_folder_crc || crc == info->folder_crc;
 }
 
 void qw_seven_zip_stream_info_dispose(QwSevenZipStreamInfo *info)

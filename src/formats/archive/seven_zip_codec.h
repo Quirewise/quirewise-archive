@@ -1,16 +1,11 @@
 #ifndef QUIREWISE_SEVEN_ZIP_CODEC_H
 #define QUIREWISE_SEVEN_ZIP_CODEC_H
 
-#include <stddef.h>
-#include <stdint.h>
+#include <quirewise/compression.h>
 
-enum { QW_SEVEN_ZIP_MAX_CODERS = 4u };
+enum { QW_SEVEN_ZIP_MAX_CODERS = QW_COMPRESSION_7Z_MAX_CODERS };
 
-typedef struct QwSevenZipCoder {
-    uint32_t method;
-    const uint8_t *properties;
-    size_t properties_size;
-} QwSevenZipCoder;
+typedef QwCompression7zCoder QwSevenZipCoder;
 
 int qw_seven_zip_decode_chain(const QwSevenZipCoder *coders,
                               size_t coder_count,
