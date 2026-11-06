@@ -41,3 +41,12 @@ if(QUIREWISE_BUILD_SHARED AND WIN32)
         quirewise_archive
         PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
 endif()
+
+include(CTest)
+if(BUILD_TESTING)
+    add_executable(quirewise_archive_fuzz_smoke tests/archive_fuzz_smoke.c)
+    target_compile_features(quirewise_archive_fuzz_smoke PRIVATE c_std_11)
+    target_link_libraries(quirewise_archive_fuzz_smoke PRIVATE Quirewise::Archive)
+    add_test(NAME quirewise_archive_fuzz_smoke
+        COMMAND quirewise_archive_fuzz_smoke)
+endif()
