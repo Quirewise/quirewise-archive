@@ -1,11 +1,17 @@
 cmake_minimum_required(VERSION 3.21)
 project(QuirewiseArchive VERSION 0.1.0 LANGUAGES C)
+option(QUIREWISE_BUILD_SHARED "Build Quirewise libraries as shared libraries" OFF)
+if(QUIREWISE_BUILD_SHARED)
+    set(QW_LIBRARY_TYPE SHARED)
+else()
+    set(QW_LIBRARY_TYPE STATIC)
+endif()
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 include(CTest)
 find_package(QuirewiseCompression CONFIG REQUIRED)
 file(GLOB_RECURSE QW_ARCHIVE_SOURCES CONFIGURE_DEPENDS src/*.c)
-add_library(quirewise_archive STATIC ${QW_ARCHIVE_SOURCES})
+add_library(quirewise_archive ${QW_LIBRARY_TYPE} ${QW_ARCHIVE_SOURCES})
 add_library(Quirewise::Archive ALIAS quirewise_archive)
 set_target_properties(quirewise_archive PROPERTIES EXPORT_NAME Archive POSITION_INDEPENDENT_CODE ON)
 target_compile_features(quirewise_archive PUBLIC c_std_11)
@@ -29,3 +35,9 @@ install(EXPORT QuirewiseArchiveTargets FILE QuirewiseArchiveTargets.cmake NAMESP
 configure_package_config_file(cmake/QuirewiseArchiveConfig.cmake.in "${CMAKE_CURRENT_BINARY_DIR}/QuirewiseArchiveConfig.cmake" INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/QuirewiseArchive")
 write_basic_package_version_file("${CMAKE_CURRENT_BINARY_DIR}/QuirewiseArchiveConfigVersion.cmake" VERSION "${PROJECT_VERSION}" COMPATIBILITY SameMajorVersion)
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/QuirewiseArchiveConfig.cmake" "${CMAKE_CURRENT_BINARY_DIR}/QuirewiseArchiveConfigVersion.cmake" DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/QuirewiseArchive")
+
+if(QUIREWISE_BUILD_SHARED AND WIN32)
+    set_target_properties(
+        quirewise_archive
+        PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
+endif()
