@@ -67,6 +67,7 @@ typedef enum QwArchiveTarVisitAction {
 typedef QwArchiveTarVisitAction (*QwArchiveTarVisitor)(
     void *context, const char *name, const uint8_t *data, size_t size);
 
+/*! Return the ABI version compiled into the installed archive package. */
 QUIREWISE_ARCHIVE_API uint32_t qw_archive_abi_version(void);
 
 /* Opens an in-memory ZIP archive. The input bytes are borrowed and must remain
@@ -75,9 +76,12 @@ QUIREWISE_ARCHIVE_API uint32_t qw_archive_abi_version(void);
 QUIREWISE_ARCHIVE_API QwArchiveStatus qw_zip_archive_open(
     const void *data, size_t size, QwZipArchiveReader **out_reader,
     const char **out_error);
+/*! Release a ZIP reader; NULL is accepted. */
 QUIREWISE_ARCHIVE_API void qw_zip_archive_close(QwZipArchiveReader *reader);
+/*! Return the number of entries in a ZIP archive. */
 QUIREWISE_ARCHIVE_API size_t qw_zip_archive_entry_count(
     const QwZipArchiveReader *reader);
+/*! Return one entry's metadata by index. */
 QUIREWISE_ARCHIVE_API QwArchiveStatus qw_zip_archive_get_entry(
     const QwZipArchiveReader *reader, size_t index, QwArchiveEntry *out_entry);
 /* Pass NULL for unencrypted entries or a traditional ZipCrypto password. */
@@ -89,10 +93,12 @@ QUIREWISE_ARCHIVE_API QwArchiveStatus qw_zip_archive_extract(
 QUIREWISE_ARCHIVE_API QwArchiveStatus qw_tar_archive_visit_ustar(
     const void *data, size_t size, QwArchiveTarVisitor visitor,
     void *visitor_context);
+/*! Release a buffer returned by qw_zip_archive_extract(); NULL is accepted. */
 QUIREWISE_ARCHIVE_API void qw_archive_buffer_free(QwArchiveBuffer *buffer);
 /* Returns the last native ZIP diagnostic, or NULL when there is no error. */
 QUIREWISE_ARCHIVE_API const char *qw_zip_archive_last_error(
     const QwZipArchiveReader *reader);
+/*! Return a static human-readable name for a status code. */
 QUIREWISE_ARCHIVE_API const char *qw_archive_status_string(int status);
 
 #ifdef __cplusplus
